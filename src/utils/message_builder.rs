@@ -995,10 +995,10 @@ fn normalize(text: &str) -> String {
 #[cfg(test)]
 mod test {
     use crate::model::prelude::*;
-    use super::{
-        ContentModifier::*,
-        MessageBuilder,
-    };
+
+    #[allow(clippy::enum_glob_use)]
+    use super::ContentModifier::*;
+    use super::MessageBuilder;
 
     macro_rules! gen {
         ($($fn:ident => [$($text:expr => $expected:expr),+]),+) => ({

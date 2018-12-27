@@ -113,8 +113,6 @@ extern crate bitflags;
 #[allow(clippy::unused_imports)]
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate serde_derive;
 #[allow(clippy::unused_imports)]
 #[macro_use]
 extern crate serde_json;
@@ -125,6 +123,7 @@ extern crate lazy_static;
 
 extern crate chrono;
 extern crate parking_lot;
+#[macro_use]
 extern crate serde;
 
 #[cfg(feature = "base64")]
@@ -136,7 +135,10 @@ extern crate flate2;
 #[cfg(feature = "reqwest")]
 extern crate reqwest;
 
-
+#[cfg(all(feature = "framework", feature = "standard_framework"))]
+extern crate uwl;
+#[cfg(all(feature = "framework", feature = "standard_framework"))]
+extern crate command_attr;
 #[cfg(feature = "opus")]
 extern crate opus;
 #[cfg(feature = "rand")]
@@ -152,7 +154,7 @@ extern crate typemap;
 #[cfg(feature = "url")]
 extern crate url;
 
-#[allow(clippy::unused_imports)]
+#[allow(unused_imports)]
 #[cfg(test)]
 #[macro_use]
 extern crate matches;

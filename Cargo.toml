@@ -14,9 +14,19 @@ version = "0.5.11"
 bitflags = "^1.0"
 log = "~0.4"
 parking_lot = "^0.6"
-serde = "^1.0"
-serde_derive = "^1.0"
 serde_json = "^1.0"
+
+[dependencies.command_attr]
+path = "./command_attr"
+optional = true
+
+[dependencies.serde]
+version = "^1.0"
+features = ["derive"]
+
+[dependencies.uwl]
+optional = true
+version = "^0.2"
 
 [dependencies.base64]
 optional = true
@@ -101,7 +111,7 @@ framework = ["client", "model", "utils"]
 gateway = ["flate2", "http", "tungstenite", "url", "utils"]
 http = ["reqwest", "lazy_static"]
 model = ["builder", "http"]
-standard_framework = ["framework"]
+standard_framework = ["uwl", "command_attr", "framework"]
 utils = ["base64"]
 voice = ["byteorder", "gateway", "opus", "rand", "sodiumoxide"]
 

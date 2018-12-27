@@ -933,29 +933,11 @@ impl Client {
         #[cfg(feature = "voice")]
         self.voice_manager.lock().set_shard_count(shard_data[2]);
 
-        // This is kind of gross, but oh well.
-        //
-        // Both the framework and voice bridge need the user's ID, so we'll only
-        // retrieve it over REST if at least one of those are enabled.
-        #[cfg(any(all(feature = "standard_framework", feature = "framework"),
-                  feature = "voice"))]
+        #[cfg(feature = "voice")]
         {
             let user = http::get_current_user()?;
 
-            // Update the framework's current user if the feature is enabled.
-            //
-            // This also acts as a form of check to ensure the token is correct.
-            #[cfg(all(feature = "standard_framework", feature = "framework"))]
-            {
-                if let Some(ref mut framework) = *self.framework.lock() {
-                    framework.update_current_user(user.id);
-                }
-            }
-
-            #[cfg(feature = "voice")]
-            {
-                self.voice_manager.lock().set_user_id(user.id);
-            }
+            self.voice_manager.lock().set_user_id(user.id);
         }
 
         {
