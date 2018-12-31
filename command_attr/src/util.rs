@@ -1,11 +1,12 @@
 use proc_macro2::Span;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
-use syn::{bracketed, braced};
-use syn::parse::{Parse, ParseStream, Result};
-use syn::Token;
-use syn::{Ident, Lit, Type};
-use syn::token::{Mut, Brace, Bracket};
+use syn::{
+    braced, bracketed,
+    parse::{Parse, ParseStream, Result},
+    token::{Brace, Bracket, Mut},
+    Ident, Lit, Token, Type,
+};
 
 pub trait LitExt {
     fn to_str(&self) -> String;
@@ -42,12 +43,7 @@ impl LitExt for Lit {
 
 pub trait IdentExt2: Sized {
     fn to_uppercase(&self) -> Self;
-    fn to_command_options(&self) -> Ident;
-    fn to_command(&self) -> Ident;
-    fn to_help_options(&self) -> Ident;
-    fn to_help_command(&self) -> Ident;
-    fn to_group_options(&self) -> Ident;
-    fn to_group(&self) -> Ident;
+    fn with_suffix(&self, suf: &str) -> Ident;
 }
 
 impl IdentExt2 for Ident {
@@ -58,44 +54,9 @@ impl IdentExt2 for Ident {
         Ident::new(&ident, Span::call_site())
     }
 
-    fn to_command_options(&self) -> Ident {
+    fn with_suffix(&self, suf: &str) -> Ident {
         Ident::new(
-            &format!("{}_COMMAND_OPTIONS", self.to_uppercase()),
-            Span::call_site(),
-        )
-    }
-
-    fn to_command(&self) -> Ident {
-        Ident::new(
-            &format!("{}_COMMAND", self.to_uppercase()),
-            Span::call_site(),
-        )
-    }
-
-    fn to_help_options(&self) -> Ident {
-        Ident::new(
-            &format!("{}_HELP_OPTIONS", self.to_uppercase()),
-            Span::call_site(),
-        )
-    }
-
-    fn to_help_command(&self) -> Ident {
-        Ident::new(
-            &format!("{}_HELP_COMMAND", self.to_uppercase()),
-            Span::call_site(),
-        )
-    }
-
-    fn to_group_options(&self) -> Ident {
-        Ident::new(
-            &format!("{}_GROUP_OPTIONS", self.to_uppercase()),
-            Span::call_site(),
-        )
-    }
-
-    fn to_group(&self) -> Ident {
-        Ident::new(
-            &format!("{}_GROUP", self.to_uppercase()),
+            &format!("{}_{}", self.to_uppercase(), suf),
             Span::call_site(),
         )
     }
@@ -118,7 +79,7 @@ impl<'a> ParseStreamExt for ParseStream<'a> {
     }
 }
 
-pub struct AsOption<T: ToTokens>(pub Option<T>);
+pub struct AsOption<T>(pub Option<T>);
 
 impl<T: ToTokens> ToTokens for AsOption<T> {
     fn to_tokens(&self, stream: &mut TokenStream2) {
@@ -138,7 +99,11 @@ pub struct Argument {
 
 impl ToTokens for Argument {
     fn to_tokens(&self, stream: &mut TokenStream2) {
-        let Argument { mutable, name, kind } = self;
+        let Argument {
+            mutable,
+            name,
+            kind,
+        } = self;
 
         stream.extend(quote! {
             #mutable #name: #kind

@@ -50,7 +50,7 @@ impl Values {
     }
 }
 
-pub fn parse_values(attr: Attribute) -> Result<Values> {
+pub fn parse_values(attr: &Attribute) -> Result<Values> {
     let meta = attr.parse_meta()?;
 
     match meta {
