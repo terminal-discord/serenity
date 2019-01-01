@@ -103,28 +103,6 @@ impl Emoji {
     /// **Note**: Only user accounts may use this method.
     ///
     /// [Manage Emojis]: ../permissions/struct.Permissions.html#associatedconstant.MANAGE_EMOJIS
-    ///
-    /// # Examples
-    ///
-    /// Change the name of an emoji:
-    ///
-    /// ```rust,no_run
-    /// # use serenity::{command, model::{guild::Emoji, id::EmojiId}};
-    /// #
-    /// # command!(example(context) {
-    /// # let mut emoji = Emoji {
-    /// #     animated: false,
-    /// #     id: EmojiId(7),
-    /// #     name: String::from("blobface"),
-    /// #     managed: false,
-    /// #     require_colons: false,
-    /// #     roles: vec![],
-    /// # };
-    /// // assuming emoji has been set already
-    /// let _ = emoji.edit(&context.cache, "blobuwu");
-    /// assert_eq!(emoji.name, "blobuwu");
-    /// # });
-    /// ```
     #[cfg(feature = "cache")]
     pub fn edit(&mut self, cache: &Arc<RwLock<Cache>>, name: &str) -> Result<()> {
         match self.find_guild_id(&cache) {

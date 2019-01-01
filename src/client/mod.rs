@@ -515,23 +515,41 @@ impl Client {
     /// # use serenity::prelude::EventHandler;
     /// # use std::error::Error;
     /// #
-    /// use serenity::framework::StandardFramework;
-    ///
     /// struct Handler;
     ///
     /// impl EventHandler for Handler {}
-    /// # fn try_main() -> Result<(), Box<Error>> {
-    /// use serenity::Client;
+    ///
     /// use std::env;
+    ///
+    /// use serenity::framework::StandardFramework;
+    /// use serenity::client::{Client, Context};
+    /// use serenity::model::channel::Message;
+    /// use serenity::framework::standard::{CommandResult, macros::{initialize, group, command}};
+    ///
+    /// // The `command` and `group` macros need to have an idea where the necessary structs are.
+    /// initialize!(serenity);
+    ///
+    /// #[command]
+    /// fn ping(_ctx: &mut Context, msg: &Message) -> CommandResult {
+    ///     msg.channel_id.say("Pong!")?;
+    ///     Ok(())
+    /// }
+    ///
+    /// // Commands must be intermediately handled through groups.
+    /// group!({
+    ///     name: "pingpong",
+    ///     options: {},
+    ///     commands: [ping],
+    /// });
+    /// #
+    /// # fn try_main() -> Result<(), Box<Error>> {
     ///
     /// let mut client = Client::new(&env::var("DISCORD_TOKEN")?, Handler)?;
     /// client.with_framework(StandardFramework::new()
     ///     .configure(|c| c.prefix("~"))
-    ///     .on("ping", |_, msg, _| {
-    ///         msg.channel_id.say("Pong!")?;
-    ///
-    ///         Ok(())
-    ///      }));
+    ///     // The macros generate instances of command and group structs, which reside as `static` variables.
+    ///     // Hence the uppercase name, and the suffix for distinguishment.
+    ///     .group(&PINGPONG_GROUP));
     /// # Ok(())
     /// # }
     /// #

@@ -161,22 +161,37 @@ impl Configuration {
     /// Ignore a set of commands, assuming they exist:
     ///
     /// ```rust,no_run
+    /// use serenity::framework::StandardFramework;
+    /// use serenity::client::Context;
+    /// use serenity::model::channel::Message;
+    /// use serenity::framework::standard::{CommandResult, macros::{initialize, group, command}};
+    ///
+    /// initialize!(serenity);
+    ///
+    /// #[command]
+    /// fn ping(_: &mut Context, msg: &Message) -> CommandResult {
+    ///     msg.channel_id.say("Pong!")?;
+    ///     Ok(())
+    /// }
+    ///
+    /// group!({
+    ///     name: "peng",
+    ///     options: {},
+    ///     commands: [ping]
+    /// });
+    ///
+    /// # fn main() {
     /// # use serenity::prelude::*;
     /// # struct Handler;
     /// #
     /// # impl EventHandler for Handler {}
     /// # let mut client = Client::new("token", Handler).unwrap();
-    /// use serenity::framework::StandardFramework;
-    ///
     /// let disabled = vec!["ping"].into_iter().map(|x| x.to_string()).collect();
     ///
     /// client.with_framework(StandardFramework::new()
-    ///     .on("ping", |_, msg, _| {
-    ///         msg.channel_id.say("Pong!")?;
-    ///
-    ///         Ok(())
-    ///     })
+    ///     .group(&PENG_GROUP)
     ///     .configure(|c| c.disabled_commands(disabled)));
+    /// # }
     /// ```
     pub fn disabled_commands(&mut self, commands: HashSet<String>) -> &mut Self {
         self.disabled_commands = commands;
@@ -205,11 +220,6 @@ impl Configuration {
     /// use serenity::framework::StandardFramework;
     ///
     /// client.with_framework(StandardFramework::new()
-    ///     .on("ping", |_, msg, _| {
-    ///         msg.channel_id.say("Pong!")?;
-    ///
-    ///         Ok(())
-    ///      })
     ///     .configure(|c| c.dynamic_prefix(|_, msg| {
     ///         Some(if msg.channel_id.0 % 5 == 0 {
     ///             "!"

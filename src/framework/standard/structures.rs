@@ -60,6 +60,7 @@ pub struct GroupOptions {
     pub description: Option<&'static str>,
 }
 
+#[derive(Debug, Clone)]
 pub struct CommandError(pub String);
 
 impl<T: fmt::Display> From<T> for CommandError {

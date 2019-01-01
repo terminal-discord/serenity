@@ -748,14 +748,20 @@ impl Cache {
     /// Retrieve a user from the cache and print their name:
     ///
     /// ```rust,no_run
-    /// # use serenity::command;
-    /// # use std::error::Error;
+    /// # use serenity::client::Context;
+    /// # use serenity::framework::standard::{CommandResult, macros::{initialize, command}};
     /// #
-    /// # command!(test(context) {
+    /// # initialize!(serenity);
+    /// #
+    /// # #[command]
+    /// # fn test(context: &mut Context) -> CommandResult {
     /// if let Some(user) = context.cache.read().user(7) {
     ///     println!("User with Id 7 is currently named {}", user.read().name);
     /// }
-    /// # });
+    /// # Ok(())
+    /// # }
+    /// #
+    /// # fn main() {}
     /// ```
     #[inline]
     pub fn user<U: Into<UserId>>(&self, user_id: U) -> Option<Arc<RwLock<User>>> {

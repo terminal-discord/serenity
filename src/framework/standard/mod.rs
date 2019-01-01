@@ -1,4 +1,7 @@
 pub mod help_commands;
+pub mod macros {
+    pub use command_attr::{initialize, command, group, group_options, help};
+}
 
 mod args;
 mod configuration;
@@ -8,6 +11,7 @@ mod structures;
 pub use self::args::{Args, Delimiter, Error as ArgError, Iter};
 pub use self::configuration::Configuration;
 pub use self::structures::*;
+
 
 use self::parse::*;
 use super::Framework;
@@ -93,8 +97,7 @@ impl StandardFramework {
     ///
     /// # Examples
     ///
-    /// Configuring the framework for a [`Client`], setting the [`depth`] to 3,
-    /// [allowing whitespace], and setting the [`prefix`] to `"~"`:
+    /// Configuring the framework for a [`Client`], [allowing whitespace between prefixes], and setting the [`prefix`] to `"~"`:
     ///
     /// ```rust,no_run
     /// # use serenity::prelude::EventHandler;
@@ -108,16 +111,14 @@ impl StandardFramework {
     /// let mut client = Client::new(&token, Handler).unwrap();
     /// client.with_framework(StandardFramework::new()
     ///     .configure(|c| c
-    ///         .depth(3)
-    ///         .allow_whitespace(true)
+    ///         .with_whitespace(true)
     ///         .prefix("~")));
     /// ```
     ///
     /// [`Client`]: ../../client/struct.Client.html
     /// [`Configuration::default`]: struct.Configuration.html#method.default
-    /// [`depth`]: struct.Configuration.html#method.depth
     /// [`prefix`]: struct.Configuration.html#method.prefix
-    /// [allowing whitespace]: struct.Configuration.html#method.allow_whitespace
+    /// [allowing whitespace between prefixes]: struct.Configuration.html#method.with_whitespace
     pub fn configure<F>(mut self, f: F) -> Self
     where
         F: FnOnce(&mut Configuration) -> &mut Configuration,
@@ -196,25 +197,6 @@ impl StandardFramework {
     /// Adds a group which can organize several related commands.
     /// Groups are taken into account when using
     /// `serenity::framework::standard::help_commands`.
-    ///
-    /// # Examples
-    ///
-    /// Creating a simple group:
-    ///
-    /// ```rust,no_run
-    /// # use serenity::prelude::*;
-    /// # struct Handler;
-    /// #
-    /// # impl EventHandler for Handler {}
-    /// # let mut client = Client::new("token", Handler).unwrap();
-    /// #
-    /// use serenity::framework::StandardFramework;
-    ///
-    /// client.with_framework(StandardFramework::new()
-    ///     .group("ping-pong", |g| g
-    ///         .on("ping", |_, msg, _| { msg.channel_id.say("pong!")?; Ok(()) })
-    ///         .on("pong", |_, msg, _| { msg.channel_id.say("ping!")?; Ok(()) })));
-    /// ```
     pub fn group(mut self, group: &'static CommandGroup) -> Self {
         self.groups.push(group);
 
@@ -402,7 +384,7 @@ impl StandardFramework {
     /// use serenity::framework::StandardFramework;
     ///
     /// client.with_framework(StandardFramework::new()
-    ///     .message_without_command(|ctx, msg| { }));
+    ///     .normal_message(|ctx, msg| { }));
     /// ```
     pub fn normal_message<F>(mut self, f: F) -> Self
     where

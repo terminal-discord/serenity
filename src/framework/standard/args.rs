@@ -384,9 +384,9 @@ impl Args {
     /// Assert that all of the numbers in the message are even.
     ///
     /// ```rust
-    /// use serenity::framework::standard::Args;
+    /// use serenity::framework::standard::{Args, Delimiter};
     ///
-    /// let mut args = Args::new("4 2", &[" ".to_string()]);
+    /// let mut args = Args::new("4 2", &[Delimiter::Single(' ')]);
     ///
     /// for arg in args.iter::<u32>() {
     ///     // Zero troubles, zero worries.

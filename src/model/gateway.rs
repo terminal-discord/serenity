@@ -64,24 +64,6 @@ impl Activity {
     /// Creates a `Game` struct that appears as a `Playing <name>` status.
     ///
     /// **Note**: Maximum `name` length is 128.
-    ///
-    /// # Examples
-    ///
-    /// Create a command that sets the current activity:
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate serenity;
-    /// #
-    /// use serenity::framework::standard::Args;
-    /// use serenity::model::gateway::Activity;
-    ///
-    /// command!(activity(ctx, _msg, args) {
-    ///     let name = args.full();
-    ///     ctx.set_activity(Activity::playing(&name));
-    /// });
-    /// #
-    /// # fn main() {}
-    /// ```
     pub fn playing(name: &str) -> Activity {
         Activity {
             application_id: None,
@@ -103,26 +85,6 @@ impl Activity {
     /// status.
     ///
     /// **Note**: Maximum `name` length is 128.
-    ///
-    /// # Examples
-    ///
-    /// Create a command that sets the current streaming status:
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate serenity;
-    /// #
-    /// use serenity::framework::standard::Args;
-    /// use serenity::model::gateway::Activity;
-    ///
-    /// // Assumes command has min_args set to 2.
-    /// command!(stream(ctx, _msg, args) {
-    ///     # let stream_url = String::from("");
-    ///     let name = args.full();
-    ///     ctx.set_activity(Activity::streaming(&name, &stream_url));
-    /// });
-    /// #
-    /// # fn main() {}
-    /// ```
     pub fn streaming(name: &str, url: &str) -> Activity {
         Activity {
             application_id: None,
@@ -143,24 +105,6 @@ impl Activity {
     /// Creates a `Game` struct that appears as a `Listening to <name>` status.
     ///
     /// **Note**: Maximum `name` length is 128.
-    ///
-    /// # Examples
-    ///
-    /// Create a command that sets the current listening status:
-    ///
-    /// ```rust,no_run
-    /// # #[macro_use] extern crate serenity;
-    /// #
-    /// use serenity::framework::standard::Args;
-    /// use serenity::model::gateway::Activity;
-    ///
-    /// command!(listen(ctx, _msg, args) {
-    ///     let name = args.full();
-    ///     ctx.set_activity(Activity::listening(&name));
-    /// });
-    /// #
-    /// # fn main() {}
-    /// ```
     pub fn listening(name: &str) -> Activity {
         Activity {
             application_id: None,
