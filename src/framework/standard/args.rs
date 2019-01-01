@@ -488,8 +488,8 @@ impl Args {
     ///
     /// # Note
     ///
-    /// The value returned is to be assume to stay static.
-    /// If `find` was called previously, and was succesful, then the value is substracted by one.
+    /// The value returned is to be assumed to stay static.
+    /// However, if `find` was called previously, and was succesful, then the value is substracted by one.
     #[inline]
     pub fn len(&self) -> usize {
         self.args.len()
