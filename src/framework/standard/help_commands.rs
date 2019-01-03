@@ -23,15 +23,18 @@
 //! [`plain`]: fn.plain.html
 //! [`with_embeds`]: fn.with_embeds.html
 
-use command_attr::{initialize, help};
 use super::structures::Command as InternalCommand;
-use super::{Args, CommandResult, CommandGroup, CommandOptions, HelpBehaviour, HelpOptions, OnlyIn};
+use super::{
+    macros::{help, initialize},
+    has_correct_permissions,
+    has_correct_roles,
+    Args, CommandGroup, CommandOptions, CommandResult, HelpBehaviour, HelpOptions, OnlyIn,
+};
 #[cfg(feature = "cache")]
 use crate::cache::Cache;
 use crate::client::Context;
 use crate::model::{
     channel::Message,
-    guild::{Guild, Member},
     id::ChannelId,
 };
 use crate::utils::Colour;
@@ -44,33 +47,6 @@ use std::{
     ops::{Index, IndexMut},
     sync::Arc,
 };
-
-// #[cfg(feature = "cache")]
-// pub fn has_correct_permissions(cache: &Arc<RwLock<Cache>>, command: &'static CommandOptions, message: &Message) -> bool {
-//     if command.required_permissions.is_empty() {
-//         true
-//     } else {
-//         if let Some(guild) = message.guild(&cache) {
-//             let perms = guild
-//                 .with(|g| g.permissions_in(message.channel_id, message.author.id));
-
-//             perms.contains(command.required_permissions)
-//         } else {
-//             false
-//         }
-//     }
-// }
-
-pub fn has_correct_roles(cmd: &CommandOptions, guild: &Guild, member: &Member) -> bool {
-    if cmd.allowed_roles.is_empty() {
-        true
-    } else {
-        cmd.allowed_roles
-            .iter()
-            .flat_map(|r| guild.role_by_name(r))
-            .any(|g| member.roles.contains(&g.id))
-    }
-}
 
 /// Macro to format a command according to a `HelpBehaviour` or
 /// continue to the next command-name upon hiding.
@@ -261,9 +237,11 @@ pub fn has_all_requirements(
         if let Some(member) = guild.members.get(&msg.author.id) {
             if let Ok(permissions) = member.permissions(&cache) {
                 return if cmd.allowed_roles.is_empty() {
-                    permissions.administrator() /* || has_correct_permissions(&cache, cmd, msg) */
+                    permissions.administrator() || has_correct_permissions(&cache, cmd, msg)
                 } else {
-                    permissions.administrator() || has_correct_roles(cmd, &guild, member) /* (has_correct_roles(cmd, &guild, member) && has_correct_permissions(&cache, cmd, msg)) */
+                    permissions.administrator()
+                        || (has_correct_roles(cmd, &guild, member)
+                            && has_correct_permissions(&cache, cmd, msg))
                 };
             }
         }
@@ -293,31 +271,23 @@ pub fn is_command_visible(
 
             if let Some(member) = guild.members.get(&msg.author.id) {
                 if command_options.help_available {
-                    return if has_correct_roles(command_options, &guild, &member) {
-                        true
+                    return if has_correct_permissions(&cache, command_options, msg) {
+                        if has_correct_roles(command_options, &guild, &member) {
+                            true
+                        } else {
+                            help_options.lacking_role != HelpBehaviour::Hide
+                        }
                     } else {
-                        help_options.lacking_role != HelpBehaviour::Hide
+                        help_options.lacking_permissions != HelpBehaviour::Hide
                     };
-
-                    // return if has_correct_permissions(&cache, command_options, msg) {
-                    //     if has_correct_roles(command_options, &guild, &member) {
-                    //         true
-                    //     } else {
-                    //         help_options.lacking_role != HelpBehaviour::Hide
-                    //     }
-                    // } else {
-                    //     help_options.lacking_permissions != HelpBehaviour::Hide
-                    // }
                 }
             }
         } else if command_options.help_available {
-            return true;
-
-            // return if has_correct_permissions(&cache, command_options, msg) {
-            //     true
-            // } else {
-            //     help_options.lacking_permissions != HelpBehaviour::Hide
-            // };
+            return if has_correct_permissions(&cache, command_options, msg) {
+                true
+            } else {
+                help_options.lacking_permissions != HelpBehaviour::Hide
+            };
         }
     } else {
         return help_options.wrong_channel != HelpBehaviour::Hide;
@@ -459,7 +429,9 @@ fn fetch_all_eligible_commands_in_group<'a>(
             || options.only_in == OnlyIn::Dm && msg.is_private()
             || options.only_in == OnlyIn::Guild && !msg.is_private()
         {
-            if options.help_available /* && has_correct_permissions(&cache, &cmd, msg) */ {
+            if options.help_available
+            /* && has_correct_permissions(&cache, &cmd, msg) */
+            {
                 if let Some(guild) = msg.guild(&cache) {
                     let guild = guild.read();
 
@@ -518,12 +490,8 @@ fn create_single_group<'a>(
     msg: &Message,
     help_options: &HelpOptions,
 ) -> GroupCommandsPair {
-    let mut group_with_cmds = fetch_all_eligible_commands_in_group(
-        &cache,
-        &group.commands,
-        &help_options,
-        &msg,
-    );
+    let mut group_with_cmds =
+        fetch_all_eligible_commands_in_group(&cache, &group.commands, &help_options, &msg);
 
     group_with_cmds.name = group.name;
 
@@ -555,14 +523,23 @@ pub fn create_customised_help_data<'a>(
 
                 for group in groups {
                     if group.name.to_lowercase() == searched_named_lowercase
-                        || group.options.prefixes.iter().any(|prefix| *prefix == searched_named_lowercase)
+                        || group
+                            .options
+                            .prefixes
+                            .iter()
+                            .any(|prefix| *prefix == searched_named_lowercase)
                     {
                         let mut single_group =
                             create_single_group(&cache, &group, &msg, &help_options);
 
                         if !single_group.command_names.is_empty() {
                             return CustomisedHelpData::GroupedCommands {
-                                help_description: group.options.description.as_ref().map(|s| s.to_string()).unwrap_or_default(),
+                                help_description: group
+                                    .options
+                                    .description
+                                    .as_ref()
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_default(),
                                 groups: vec![single_group],
                             };
                         }
@@ -598,12 +575,8 @@ pub fn create_customised_help_data<'a>(
         help_options.individual_command_tip.to_string()
     };
 
-    let listed_groups = create_command_group_commands_pair_from_groups(
-        &cache,
-        &groups,
-        &msg,
-        &help_options,
-    );
+    let listed_groups =
+        create_command_group_commands_pair_from_groups(&cache, &groups, &msg, &help_options);
 
     return if listed_groups.is_empty() {
         CustomisedHelpData::NoCommandFound {

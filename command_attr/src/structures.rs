@@ -169,6 +169,49 @@ impl ToTokens for CommandFun {
 }
 
 #[derive(Debug, Default)]
+pub struct Permissions(pub u64);
+
+impl Permissions {
+    pub fn from_str(s: &str) -> Option<Self> {
+        Some(Permissions(match s {
+            "PRESET_GENERAL" => 0b0000_0110_0011_0111_1101_1100_0100_0001,
+            "PRESET_TEXT" => 0b0000_0000_0000_0111_1111_1100_0100_0000,
+            "PRESET_VOICE" => 0b0000_0011_1111_0000_0000_0000_0000_0000,
+            "CREATE_INVITE" => 0b0000_0000_0000_0000_0000_0000_0000_0001,
+            "KICK_MEMBERS" => 0b0000_0000_0000_0000_0000_0000_0000_0010,
+            "BAN_MEMBERS" => 0b0000_0000_0000_0000_0000_0000_0000_0100,
+            "ADMINISTRATOR" => 0b0000_0000_0000_0000_0000_0000_0000_1000,
+            "MANAGE_CHANNELS" => 0b0000_0000_0000_0000_0000_0000_0001_0000,
+            "MANAGE_GUILD" => 0b0000_0000_0000_0000_0000_0000_0010_0000,
+            "ADD_REACTIONS" => 0b0000_0000_0000_0000_0000_0000_0100_0000,
+            "VIEW_AUDIT_LOG" => 0b0000_0000_0000_0000_0000_0000_1000_0000,
+            "PRIORITY_SPEAKER" => 0b0000_0000_0000_0000_0000_0001_0000_0000,
+            "READ_MESSAGES" => 0b0000_0000_0000_0000_0000_0100_0000_0000,
+            "SEND_MESSAGES" => 0b0000_0000_0000_0000_0000_1000_0000_0000,
+            "SEND_TTS_MESSAGES" => 0b0000_0000_0000_0000_0001_0000_0000_0000,
+            "MANAGE_MESSAGES" => 0b0000_0000_0000_0000_0010_0000_0000_0000,
+            "EMBED_LINKS" => 0b0000_0000_0000_0000_0100_0000_0000_0000,
+            "ATTACH_FILES" => 0b0000_0000_0000_0000_1000_0000_0000_0000,
+            "READ_MESSAGE_HISTORY" => 0b0000_0000_0000_0001_0000_0000_0000_0000,
+            "MENTION_EVERYONE" => 0b0000_0000_0000_0010_0000_0000_0000_0000,
+            "USE_EXTERNAL_EMOJIS" => 0b0000_0000_0000_0100_0000_0000_0000_0000,
+            "CONNECT" => 0b0000_0000_0001_0000_0000_0000_0000_0000,
+            "SPEAK" => 0b0000_0000_0010_0000_0000_0000_0000_0000,
+            "MUTE_MEMBERS" => 0b0000_0000_0100_0000_0000_0000_0000_0000,
+            "DEAFEN_MEMBERS" => 0b0000_0000_1000_0000_0000_0000_0000_0000,
+            "MOVE_MEMBERS" => 0b0000_0001_0000_0000_0000_0000_0000_0000,
+            "USE_VAD" => 0b0000_0010_0000_0000_0000_0000_0000_0000,
+            "CHANGE_NICKNAME" => 0b0000_0100_0000_0000_0000_0000_0000_0000,
+            "MANAGE_NICKNAMES" => 0b0000_1000_0000_0000_0000_0000_0000_0000,
+            "MANAGE_ROLES" => 0b0001_0000_0000_0000_0000_0000_0000_0000,
+            "MANAGE_WEBHOOKS" => 0b0010_0000_0000_0000_0000_0000_0000_0000,
+            "MANAGE_EMOJIS" => 0b0100_0000_0000_0000_0000_0000_0000_0000,
+            _ => return None,
+        }))
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct Options {
     pub checks: Vec<Ident>,
     pub names: Vec<String>,
@@ -177,6 +220,7 @@ pub struct Options {
     pub min_args: Option<u8>,
     pub max_args: Option<u8>,
     pub allowed_roles: Vec<String>,
+    pub required_permissions: Permissions,
     pub help_available: bool,
     pub only_in: OnlyIn,
     pub owners_only: bool,
@@ -281,6 +325,7 @@ pub struct GroupOptions {
     pub owner_privilege: bool,
     pub help_available: bool,
     pub allowed_roles: Vec<String>,
+    pub required_permissions: Permissions,
     pub checks: Vec<Ident>,
     pub default_command: Option<Ident>,
     pub description: Option<String>,
@@ -305,10 +350,15 @@ impl Parse for GroupOptions {
                     let values = values
                         .into_iter()
                         .map(|l| match l {
-                            Expr::Lit(l) => l.to_str(),
-                            _ => panic!("expected a list of strings"),
+                            Expr::Lit(l) => Some(l.to_str()),
+                            _ => None,
                         })
-                        .collect();
+                        .collect::<Option<_>>();
+
+                    let values = match values {
+                        Some(values) => values,
+                        None => return Err(Error::new(span, "expected a list of strings")),
+                    };
 
                     if name == "prefixes" {
                         options.prefixes = values;
@@ -341,16 +391,36 @@ impl Parse for GroupOptions {
                         options.help_available = b;
                     }
                 }
-                ("checks", Expr::Array(Array(arr))) => {
+                ("checks", Expr::Array(Array(arr))) | ("required_permissions", Expr::Array(Array(arr))) => {
                     let idents = arr
                         .into_iter()
                         .map(|l| match l {
-                            Expr::Access(IdentAccess(l, None)) => l,
-                            _ => panic!("invalid value, expected ident {:?}", l),
+                            Expr::Access(IdentAccess(l, None)) => Some(l),
+                            _ => None,
                         })
-                        .collect();
+                        .collect::<Option<_>>();
 
-                    options.checks = idents;
+                    let idents = match idents {
+                        Some(idents) => idents,
+                        None => return Err(Error::new(span, "invalid value, expected ident")),
+                    };
+
+                    if name == "checks" {
+                        options.checks = idents;
+                    } else {
+                        let mut permissions = Permissions::default();
+                        for perm in idents {
+                            let p = match Permissions::from_str(&perm.to_string()) {
+                                Some(p) => p,
+                                None => return Err(Error::new(perm.span(), "invalid permission")),
+                            };
+
+                            // Add them together.
+                            permissions.0 |= p.0;
+                        }
+
+                        options.required_permissions = permissions;
+                    }
                 }
                 ("default_command", Expr::Access(IdentAccess(re, _))) => {
                     options.default_command = Some(re);
@@ -384,6 +454,7 @@ impl ToTokens for GroupOptions {
         let GroupOptions {
             prefixes,
             allowed_roles,
+            required_permissions,
             owner_privilege,
             owner_only,
             help_available,
@@ -406,6 +477,9 @@ impl ToTokens for GroupOptions {
 
         let crate_name = CRATE_NAME.with(|cn| Ident::new(&cn.borrow(), Span::call_site()));
         let options_path = quote!(#crate_name::framework::standard::GroupOptions);
+        let permissions_path = quote!(#crate_name::model::permissions::Permissions);
+
+        let required_permissions = required_permissions.0;
 
         if let Some(IdentAccess(from, its)) = inherit {
             let inherit = match its {
@@ -438,6 +512,12 @@ impl ToTokens for GroupOptions {
 
             let allowed_roles = if !allowed_roles.is_empty() {
                 quote! { allowed_roles: &[#(#allowed_roles),*], }
+            } else {
+                quote!()
+            };
+
+            let required_permissions = if required_permissions != 0 {
+                quote! { required_permissions: #permissions_path { bits: #required_permissions }, }
             } else {
                 quote!()
             };
@@ -482,6 +562,7 @@ impl ToTokens for GroupOptions {
                 #options_path {
                     #prefixes
                     #allowed_roles
+                    #required_permissions
                     #owner_privilege
                     #owner_only
                     #help_available
@@ -497,6 +578,7 @@ impl ToTokens for GroupOptions {
                 #options_path {
                     prefixes: &[#(#prefixes),*],
                     allowed_roles: &[#(#allowed_roles),*],
+                    required_permissions: #permissions_path { bits: #required_permissions },
                     owner_privilege: #owner_privilege,
                     owners_only: #owner_only,
                     help_available: #help_available,

@@ -1,6 +1,9 @@
 use std::fmt;
 use crate::client::Context;
-use crate::model::channel::Message;
+use crate::model::{
+    channel::Message,
+    permissions::Permissions,
+};
 use super::Args;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +43,7 @@ pub struct CommandOptions {
     pub min_args: Option<u8>,
     pub max_args: Option<u8>,
     pub allowed_roles: &'static [&'static str],
+    pub required_permissions: Permissions,
     pub help_available: bool,
     pub only_in: OnlyIn,
     pub owners_only: bool,
@@ -55,6 +59,7 @@ pub struct GroupOptions {
     pub owner_privilege: bool,
     pub help_available: bool,
     pub allowed_roles: &'static [&'static str],
+    pub required_permissions: Permissions,
     pub checks: &'static [Check],
     pub default_command: Option<&'static Command>,
     pub description: Option<&'static str>,

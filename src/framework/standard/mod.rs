@@ -16,10 +16,16 @@ pub use self::structures::*;
 use self::parse::*;
 use super::Framework;
 use crate::client::Context;
-use crate::model::channel::Message;
+use crate::cache::Cache;
+use crate::model::{
+    guild::{Guild, Member},
+    channel::Message,
+    permissions::Permissions,
+};
+use crate::internal::RwLockExt;
 use std::sync::Arc;
+use parking_lot::RwLock;
 use threadpool::ThreadPool;
-
 /// An enum representing all possible fail conditions under which a command won't
 /// be executed.
 #[derive(Debug)]
@@ -38,6 +44,8 @@ pub enum DispatchError {
     OnlyForOwners,
     /// When the requested command requires one role.
     LackingRole,
+    /// When the command requester lacks specific required permissions.
+    LackingPermissions(Permissions),
     /// When there are too few arguments.
     NotEnoughArguments { min: u8, given: usize },
     /// When there are too many arguments.
@@ -162,6 +170,13 @@ impl StandardFramework {
 
         if group.owners_only || command.owners_only {
             return Some(DispatchError::OnlyForOwners);
+        }
+
+        #[cfg(feature = "cache")]
+        {
+            if !has_correct_permissions(&ctx.cache, &command, msg) {
+                return Some(DispatchError::LackingPermissions(command.required_permissions));
+            }
         }
 
         if self.config.disabled_commands.contains(command.names[0]) {
@@ -553,5 +568,35 @@ impl Framework for StandardFramework {
                 });
             }
         }
+    }
+}
+
+#[cfg(feature = "cache")]
+pub(crate) fn has_correct_permissions(
+    cache: &Arc<RwLock<Cache>>,
+    command: &CommandOptions,
+    message: &Message,
+) -> bool {
+    if command.required_permissions.is_empty() {
+        true
+    } else {
+        if let Some(guild) = message.guild(&cache) {
+            let perms = guild.with(|g| g.permissions_in(message.channel_id, message.author.id));
+
+            perms.contains(command.required_permissions)
+        } else {
+            false
+        }
+    }
+}
+
+pub(crate) fn has_correct_roles(cmd: &CommandOptions, guild: &Guild, member: &Member) -> bool {
+    if cmd.allowed_roles.is_empty() {
+        true
+    } else {
+        cmd.allowed_roles
+            .iter()
+            .flat_map(|r| guild.role_by_name(r))
+            .any(|g| member.roles.contains(&g.id))
     }
 }

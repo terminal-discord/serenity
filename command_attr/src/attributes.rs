@@ -330,7 +330,8 @@ define_attribute_options!(boolean => [
 
 define_attribute_options!(list_of_idents => [
     Checks, "checks";
-    SubCommands, "sub"
+    SubCommands, "sub";
+    RequiredPermissions, "required_permissions"
 ]);
 
 // For the help command

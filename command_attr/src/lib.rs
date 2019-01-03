@@ -362,6 +362,22 @@ pub fn command(attr: TokenStream, input: TokenStream) -> TokenStream {
 
                 options.sub = s;
             }
+            "required_permissions" => {
+                let RequiredPermissions(p) = RequiredPermissions::parse(values);
+
+                let mut permissions = Permissions::default();
+                for perm in p {
+                    let p = match Permissions::from_str(&perm.to_string()) {
+                        Some(p) => p,
+                        None => return Error::new(perm.span(), "invalid permission").to_compile_error().into(),
+                    };
+
+                    // Add them together.
+                    permissions.0 |= p.0;
+                }
+
+                options.required_permissions = permissions;
+            }
             _ => {
                 return Error::new(span, &format!("invalid attribute: {:?}", name))
                     .to_compile_error()
@@ -378,6 +394,7 @@ pub fn command(attr: TokenStream, input: TokenStream) -> TokenStream {
         min_args,
         max_args,
         allowed_roles,
+        required_permissions,
         help_available,
         only_in,
         owners_only,
@@ -408,6 +425,8 @@ pub fn command(attr: TokenStream, input: TokenStream) -> TokenStream {
         Ident::new(&_name, Span::call_site())
     };
 
+    let required_permissions = required_permissions.0;
+
     let options = _name.with_suffix(COMMAND_OPTIONS);
     let sub = sub
         .into_iter()
@@ -423,6 +442,8 @@ pub fn command(attr: TokenStream, input: TokenStream) -> TokenStream {
     let crate_name = CRATE_NAME.with(|cn| Ident::new(&cn.borrow(), Span::call_site()));
     let options_path = quote!(#crate_name::framework::standard::CommandOptions);
     let command_path = quote!(#crate_name::framework::standard::Command);
+    let permissions_path = quote!(#crate_name::model::permissions::Permissions);
+
     (quote! {
         #(#cfgs)*
         pub static #options: #options_path = #options_path {
@@ -433,6 +454,7 @@ pub fn command(attr: TokenStream, input: TokenStream) -> TokenStream {
             min_args: #min_args,
             max_args: #max_args,
             allowed_roles: &[#(#allowed_roles),*],
+            required_permissions: #permissions_path { bits: #required_permissions },
             help_available: #help_available,
             only_in: #only_in,
             owners_only: #owners_only,
