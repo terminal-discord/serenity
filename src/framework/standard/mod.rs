@@ -1,6 +1,6 @@
 pub mod help_commands;
 pub mod macros {
-    pub use command_attr::{initialize, command, group, group_options, help};
+    pub use command_attr::{command, group, group_options, help, initialize};
 }
 
 mod args;
@@ -12,19 +12,18 @@ pub use self::args::{Args, Delimiter, Error as ArgError, Iter};
 pub use self::configuration::Configuration;
 pub use self::structures::*;
 
-
 use self::parse::*;
 use super::Framework;
-use crate::client::Context;
 use crate::cache::Cache;
+use crate::client::Context;
+use crate::internal::RwLockExt;
 use crate::model::{
-    guild::{Guild, Member},
     channel::Message,
+    guild::{Guild, Member},
     permissions::Permissions,
 };
-use crate::internal::RwLockExt;
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::sync::Arc;
 use threadpool::ThreadPool;
 /// An enum representing all possible fail conditions under which a command won't
 /// be executed.
@@ -172,17 +171,6 @@ impl StandardFramework {
             return Some(DispatchError::OnlyForOwners);
         }
 
-        #[cfg(feature = "cache")]
-        {
-            if !has_correct_permissions(&ctx.cache, &command, msg) {
-                return Some(DispatchError::LackingPermissions(command.required_permissions));
-            }
-        }
-
-        if self.config.disabled_commands.contains(command.names[0]) {
-            return Some(DispatchError::CommandDisabled(command.names[0].to_string()));
-        }
-
         if (group.only == OnlyIn::Dm || command.only_in == OnlyIn::Dm) && !msg.is_private() {
             return Some(DispatchError::OnlyForDM);
         }
@@ -192,6 +180,35 @@ impl StandardFramework {
             && msg.is_private()
         {
             return Some(DispatchError::OnlyForGuilds);
+        }
+
+        #[cfg(feature = "cache")]
+        {
+            if !has_correct_permissions(&ctx.cache, &command, msg) {
+                return Some(DispatchError::LackingPermissions(
+                    command.required_permissions,
+                ));
+            }
+
+            if !command.allowed_roles.is_empty() {
+                if let Some(guild) = msg.guild(&ctx.cache) {
+                    let guild = guild.read();
+
+                    if let Some(member) = guild.members.get(&msg.author.id) {
+                        if let Ok(permissions) = member.permissions(&ctx.cache) {
+                            if !permissions.administrator()
+                                && !has_correct_roles(command, &guild, member)
+                            {
+                                return Some(DispatchError::LackingRole);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if self.config.disabled_commands.contains(command.names[0]) {
+            return Some(DispatchError::CommandDisabled(command.names[0].to_string()));
         }
 
         for Check(check) in command.checks {
