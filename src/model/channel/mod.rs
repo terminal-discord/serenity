@@ -316,7 +316,7 @@ impl<'de> Deserialize<'de> for Channel {
         };
 
         match kind {
-            0 | 2 | 5 | 6 => serde_json::from_value::<GuildChannel>(Value::Object(v))
+            0 | 2 | 5 | 6 | 13 => serde_json::from_value::<GuildChannel>(Value::Object(v))
                 .map(|x| Channel::Guild(Arc::new(RwLock::new(x))))
                 .map_err(DeError::custom),
             1 => serde_json::from_value::<PrivateChannel>(Value::Object(v))
@@ -420,6 +420,7 @@ pub enum ChannelType {
     ///
     /// [`GuildChannel`]: struct.GuildChannel.html
     Store = 6,
+    Stage = 13,
     #[doc(hidden)]
     __Nonexhaustive,
 }
@@ -433,6 +434,7 @@ enum_number!(
         Category,
         News,
         Store,
+        Stage,
     }
 );
 
@@ -446,6 +448,7 @@ impl ChannelType {
             ChannelType::Category => "category",
             ChannelType::News => "news",
             ChannelType::Store => "store",
+            ChannelType::Stage => "stage",
             ChannelType::__Nonexhaustive => unreachable!(),
         }
     }
@@ -459,6 +462,7 @@ impl ChannelType {
             ChannelType::Category => 4,
             ChannelType::News => 5,
             ChannelType::Store => 6,
+            ChannelType::Stage => 13,
             ChannelType::__Nonexhaustive => unreachable!(),
         }
     }
