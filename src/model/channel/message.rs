@@ -111,6 +111,8 @@ pub struct Message {
     pub application: Option<MessageApplication>,
     /// Reference data sent with crossposted messages.
     pub message_reference: Option<MessageReference>,
+    /// The message that was replied to using this message.
+    pub referenced_message: Option<Box<Message>>, // Boxed to avoid recusion
     /// Bit flags describing extra features of the message.
     pub flags: Option<MessageFlags>,
     #[serde(skip)]
@@ -714,6 +716,8 @@ pub enum MessageType {
     NitroTier2 = 10,
     /// An indicator that the guild has reached nitro tier 3
     NitroTier3 = 11,
+    /// An message reply.
+    InlineReply = 19,
     #[doc(hidden)]
     __Nonexhaustive,
 }
@@ -732,6 +736,7 @@ enum_number!(
         NitroTier1,
         NitroTier2,
         NitroTier3,
+        InlineReply,
     }
 );
 
@@ -752,6 +757,7 @@ impl MessageType {
             NitroTier1 => 9,
             NitroTier2 => 10,
             NitroTier3 => 11,
+            InlineReply => 19,
             __Nonexhaustive => unreachable!(),
         }
     }

@@ -269,6 +269,7 @@ fn dummy_message() -> Message {
         activity: None,
         application: None,
         message_reference: None,
+        referenced_message: None,
         flags: None,
         _nonexhaustive: (),
     }
